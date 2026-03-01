@@ -40,6 +40,19 @@ def main():
         ## otherwise, the server will shut down the connection. 
         ## That means, you cannot manually type the answer as previous game
         ## 2) If you lose any round in the middle, the server will shutdown the socket, too 
+        for i in range(TOTAL_ROUNDS):
+            # receive server's letter
+            server_turn = client_socket.recv(1024).decode('utf-8')
+            # play the ideal strategy to win the round
+            match server_turn:
+                case 'P':
+                    client_turn = 'S'
+                case 'S':
+                    client_turn = 'R'
+                case 'R':
+                    client_turn = 'P'
+            # return response to server
+            client_socket.send(client_turn.encode('utf-8'))
 
         # After 100 rounds, receive final victory message
         final_message = client_socket.recv(1024).decode('utf-8')
