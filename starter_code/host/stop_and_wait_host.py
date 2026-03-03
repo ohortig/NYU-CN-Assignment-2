@@ -46,7 +46,11 @@ class StopAndWaitHost(Host, ABC):
         #  REPLACE the pass with your code
         packets_received = self.network_interface.receive_all()
         for packet in packets_received:
-            pass
+            self.inflight_packet = None
+            self.last_acked_sequence_number = packet.sequence_number
+            self.timeout_calculator.add_data_point(current_time - packet.sent_timestamp)
+            print(f"Time: {current_time} | Sequence Number: {packet.sequence_number}  | Retransmission Flag: {packet.retransmission_flag} | ACK flag: {packet.ack_flag}\n")
+
 
         # TODO: STEP 2 - Retry any messages that have timed out
         #  - When you transmit a packet (in steps 2 and 3), you should track that message as inflight
@@ -58,7 +62,16 @@ class StopAndWaitHost(Host, ABC):
         #      - Use the transmit() function of the network interface to send the packet
         #  REPLACE the pass with your code
         if self.inflight_packet is not None and self.inflight_timeout < current_time:
-            pass
+            retransmitted_packet = Packet(
+                sent_timestamp=current_time,
+                sequence_number=self.inflight_packet.sequence_number,
+                retransmission_flag=True
+            )
+            self.network_interface.transmit(retransmitted_packet)
+            self.inflight_timeout = current_time + self.timeout_calculator.timeout()
+            self.inflight_packet = retransmitted_packet
+
+            print(f"Time: {current_time} | Sequence Number: {retransmitted_packet.sequence_number}  | Retransmission Flag: {retransmitted_packet.retransmission_flag} | ACK flag: {retransmitted_packet.ack_flag}\n")
         
         # TODO: STEP 3 - Transmit new messages 
         #  - When you transmit a packet (in steps 2 and 3), you should track that message as inflight
@@ -69,7 +82,17 @@ class StopAndWaitHost(Host, ABC):
         #      - Use the transmit() function of the network interface to send the packet
         #  REPLACE the pass with your code
         if self.inflight_packet is None:
-            pass
+            new_packet = Packet(
+                sent_timestamp=current_time,
+                sequence_number=self.advance_sequence_number(),
+                retransmission_flag=False
+            )
+            self.network_interface.transmit(new_packet)
+            self.inflight_timeout = current_time + self.timeout_calculator.timeout()
+            self.inflight_packet = new_packet
+
+            print(f"Time: {current_time} | Sequence Number: {new_packet.sequence_number}  | Retransmission Flag: {new_packet.retransmission_flag} | ACK flag: {new_packet.ack_flag}\n")
+
 
         # STEP 4 - Return
         #  - Return the largest in-order sequence number
